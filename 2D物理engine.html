@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<body>
+<canvas id="world" width="400" height="400" style="border:1px solid"></canvas>
+<script>
+  const canvas = document.getElementById('world');
+  const ctx = canvas.getContext('2d');
+
+  // 物体データ（位置、速度、半径）
+  let ball = { x: 200, y: 50, vx: 2, vy: 0, radius: 20 };
+  const gravity = 0.2;  // 重力加速度
+  const bounce = 0.7;   // 跳ね返り係数
+
+  function update() {
+    // 1. 物理演算: 速度に重力を加え、位置を更新
+    ball.vy += gravity;
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    // 2. 衝突判定: 壁や床に当たったら反転
+    if (ball.y + ball.radius > canvas.height) {
+      ball.y = canvas.height - ball.radius;
+      ball.vy *= -bounce; // 下に当たったら跳ね返る
+    }
+    if (ball.x + ball.radius > canvas.width || ball.x - ball.radius < 0) {
+      ball.vx *= -bounce;
+    }
+
+    // 3. 描画
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    requestAnimationFrame(update); // ループ実行
+  }
+  update();
+</script>
+</body>
+</html>
