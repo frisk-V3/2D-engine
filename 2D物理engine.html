@@ -1,40 +1,116 @@
 <!DOCTYPE html>
-<html>
-<body>
-<canvas id="world" width="400" height="400" style="border:1px solid"></canvas>
-<script>
-  const canvas = document.getElementById('world');
-  const ctx = canvas.getContext('2d');
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>重力リセット機能付き</title>
+</head>
+<body style="display: flex; flex-direction: column; align-items: center; background: #f0f0f0; font-family: sans-serif; margin: 0; padding: 20px;">
 
-  // 物体データ（位置、速度、半径）
-  let ball = { x: 200, y: 50, vx: 2, vy: 0, radius: 20 };
-  const gravity = 0.2;  // 重力加速度
-  const bounce = 0.7;   // 跳ね返り係数
+    <div style="margin-bottom: 10px; display: flex; gap: 10px;">
+        <button onclick="toggleShape()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">形を変える</button>
+        <button onclick="resetAll()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background: #ff7675; color: white; border: none; border-radius: 4px;">リセット</button>
+    </div>
+    <p style="color: #666; font-size: 14px; margin-top: 0;">グレーの足をドラッグしてボールを受け止めてね</p>
 
-  function update() {
-    // 1. 物理演算: 速度に重力を加え、位置を更新
-    ball.vy += gravity;
-    ball.x += ball.vx;
-    ball.y += ball.vy;
+    <canvas id="world" width="500" height="500" style="background: white; border: 3px solid #333; cursor: crosshair;"></canvas>
 
-    // 2. 衝突判定: 壁や床に当たったら反転
-    if (ball.y + ball.radius > canvas.height) {
-      ball.y = canvas.height - ball.radius;
-      ball.vy *= -bounce; // 下に当たったら跳ね返る
-    }
-    if (ball.x + ball.radius > canvas.width || ball.x - ball.radius < 0) {
-      ball.vx *= -bounce;
-    }
+    <script>
+        window.onload = function() {
+            const canvas = document.getElementById('world');
+            const ctx = canvas.getContext('2d');
 
-    // 3. 描画
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-    ctx.fill();
+            // --- 初期設定データ ---
+            const initialBall = { x: 250, y: 50, vx: 3, vy: 0, size: 25, shape: 'circle' };
+            const initialPlatform = { x: 150, y: 350, w: 200, h: 25 };
 
-    requestAnimationFrame(update); // ループ実行
-  }
-  update();
-</script>
+            // 現在の状態
+            let ball = { ...initialBall };
+            let platform = { ...initialPlatform, isDragging: false };
+
+            const gravity = 0.3;
+            const bounce = 0.7;
+
+            // --- 関数 ---
+            
+            // 全てを初期状態に戻す
+            window.resetAll = function() {
+                ball = { ...initialBall };
+                platform = { ...initialPlatform, isDragging: false };
+            };
+
+            // 形の切り替え
+            window.toggleShape = function() {
+                ball.shape = (ball.shape === 'circle') ? 'rect' : 'circle';
+            };
+
+            // --- マウス操作 ---
+            canvas.onmousedown = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+                if (mx > platform.x && mx < platform.x + platform.w && 
+                    my > platform.y && my < platform.y + platform.h) {
+                    platform.isDragging = true;
+                }
+            };
+
+            window.onmousemove = (e) => {
+                if (platform.isDragging) {
+                    const rect = canvas.getBoundingClientRect();
+                    platform.x = e.clientX - rect.left - platform.w / 2;
+                    platform.y = e.clientY - rect.top - platform.h / 2;
+                }
+            };
+
+            window.onmouseup = () => platform.isDragging = false;
+
+            // --- メインループ ---
+            function loop() {
+                // 物理計算
+                ball.vy += gravity;
+                ball.x += ball.vx;
+                ball.y += ball.vy;
+
+                // 壁・床の衝突
+                if (ball.y + ball.size > canvas.height) {
+                    ball.y = canvas.height - ball.size;
+                    ball.vy *= -bounce;
+                }
+                if (ball.x + ball.size > canvas.width || ball.x - ball.size < 0) {
+                    ball.vx *= -bounce;
+                    ball.x = (ball.x < ball.size) ? ball.size : canvas.width - ball.size;
+                }
+
+                // 足場との衝突
+                if (ball.x + ball.size > platform.x && ball.x - ball.size < platform.x + platform.w &&
+                    ball.y + ball.size > platform.y && ball.y - ball.size < platform.y + platform.h) {
+                    if (ball.vy > 0 && ball.y < platform.y) {
+                        ball.y = platform.y - ball.size;
+                        ball.vy *= -bounce;
+                    }
+                }
+
+                // 描画
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // 足場
+                ctx.fillStyle = "#888";
+                ctx.fillRect(platform.x, platform.y, platform.w, platform.h);
+
+                // ボール/四角
+                ctx.fillStyle = (ball.shape === 'circle') ? "#3498db" : "#e67e22";
+                ctx.beginPath();
+                if (ball.shape === 'circle') {
+                    ctx.arc(ball.x, ball.y, ball.size, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.fillRect(ball.x - ball.size, ball.y - ball.size, ball.size * 2, ball.size * 2);
+                }
+
+                requestAnimationFrame(loop);
+            }
+            loop();
+        };
+    </script>
 </body>
 </html>
